@@ -1,0 +1,2 @@
+ALTER TABLE "email_verification" ALTER COLUMN "expires_at" SET DEFAULT '2023-09-19 16:06:26.453';--> statement-breakpoint
+ALTER TABLE "forgot_password" ALTER COLUMN "expires_at" SET DEFAULT '2023-09-22 15:36:26.462';
