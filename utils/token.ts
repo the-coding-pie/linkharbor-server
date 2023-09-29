@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { UserTokenObj } from "../types";
+import { UserTokenObj } from "../types/interfaces";
 import { db } from "../db";
 import { refreshTokenTable } from "../db/schemas/refreshToken";
 import { eq } from "drizzle-orm";
