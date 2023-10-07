@@ -3,7 +3,7 @@ import { Response } from "express";
 interface SuccessObj {
   status?: 200 | 201;
   data?: object;
-  message: string;
+  message?: string;
 }
 
 export const success = (
@@ -13,7 +13,7 @@ export const success = (
   return res.status(status).send({
     success: true,
     data: data || {},
-    message,
+    message: message || "",
   });
 };
 

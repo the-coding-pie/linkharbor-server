@@ -1,5 +1,13 @@
-import { PostgresJsDatabase, drizzle } from "drizzle-orm/postgres-js";
+import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+
+import * as userSchema from "./schemas/user";
+import * as emailVerificationSchema from "./schemas/emailVerification";
+import * as forgotPasswordSchema from "./schemas/forgotPassword";
+import * as refreshTokenSchema from "./schemas/refreshToken";
+import * as resourceSchema from "./schemas/resource";
+import * as categorySchema from "./schemas/category";
+import * as subCategorySchema from "./schemas/subCategory";
 
 // dotenv
 import "dotenv/config";
@@ -13,5 +21,15 @@ const queryClient = postgres({
   max: 10, // this is the default value though,
 });
 
-// for querying
-export const db: PostgresJsDatabase = drizzle(queryClient);
+// for better query syntax
+export const db = drizzle(queryClient, {
+  schema: {
+    ...userSchema,
+    ...emailVerificationSchema,
+    ...forgotPasswordSchema,
+    ...refreshTokenSchema,
+    ...resourceSchema,
+    ...categorySchema,
+    ...subCategorySchema,
+  },
+});

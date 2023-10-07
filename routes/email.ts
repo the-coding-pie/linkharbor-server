@@ -4,9 +4,9 @@ import { authMiddleware } from "../middlewares/auth";
 
 const emailRouter = express.Router();
 
-// Protected(Auth) GET /email/verify/:token -> emailverify
+// Protected(Auth) GET /email/verify/:token -> to verify your email is yours
 emailRouter.get("/verify/:token", authMiddleware, emailController.emailVerify);
-// Protected(Auth) POST /email/resend-verify -> resendVerifyEmail
+// Protected(Auth) POST /email/resend-verify -> to resend verify email
 emailRouter.post(
   "/resend-verify",
   authMiddleware,
