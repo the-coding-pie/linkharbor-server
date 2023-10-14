@@ -56,6 +56,14 @@ export const adminAuthMiddleware = async (
       });
     }
 
+    // if email not verified
+    if (!user[0].emailVerified) {
+      return failure(res, {
+        status: 401,
+        message: "Please verify your email before continue",
+      });
+    }
+
     req.user = user[0];
     next();
   } catch (err) {

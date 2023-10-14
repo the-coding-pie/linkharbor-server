@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { db } from "../db";
 import { failure, success } from "../utils/responses";
+import isNumeric from "../utils/isNumeric";
 
 export const getCategories = async (
   req: Request,
@@ -21,6 +22,7 @@ export const getCategories = async (
   }
 };
 
+// get sub categories of a category
 export const getSubCategories = async (
   req: Request,
   res: Response,
@@ -32,6 +34,13 @@ export const getSubCategories = async (
     if (!id) {
       return failure(res, {
         message: "Category id is required",
+        status: 400,
+      });
+    }
+
+    if (!isNumeric(id)) {
+      return failure(res, {
+        message: "Category id should be a number",
         status: 400,
       });
     }

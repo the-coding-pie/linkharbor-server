@@ -28,6 +28,13 @@ export const getResources = async (
     });
   }
 
+  if (!isNumeric(id)) {
+    return failure(res, {
+      message: "sub category id should be a number",
+      status: 400,
+    });
+  }
+
   // check if sub category exists
   const subCategoryExists = await db.query.subCategoryTable.findFirst({
     where: (subCategory, { eq }) => eq(subCategory.id, parseInt(id)),
