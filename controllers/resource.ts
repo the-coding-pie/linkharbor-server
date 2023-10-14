@@ -11,6 +11,7 @@ import { subCategoryTable } from "../db/schemas/subCategory";
 import { resourceTable } from "../db/schemas/resource";
 import { tempResourceTable } from "../db/schemas/tempResource";
 import { sql } from "drizzle-orm";
+import isNumeric from "../utils/isNumeric";
 
 // get all resources for a sub category
 export const getResources = async (
@@ -143,7 +144,7 @@ export const addResource = async (
       const categoryExists = await db.query.categoryTable.findFirst({
         where: (category, { or, eq }) =>
           or(
-            eq(category.id, categoryId),
+            isNumeric(categoryId) ? eq(category.id, categoryId) : undefined,
             sql`lower(${category.name}) = lower(${categoryId})`
           ),
       });
@@ -178,7 +179,9 @@ export const addResource = async (
           where: (subCategory, { and, or, eq }) =>
             and(
               or(
-                eq(subCategory.id, subCategoryId),
+                isNumeric(subCategoryId)
+                  ? eq(subCategory.id, subCategoryId)
+                  : undefined,
                 sql`lower(${subCategory.name}) = lower(${subCategoryId})`
               ),
               eq(subCategory.categoryId, categoryExists.id)
@@ -208,11 +211,15 @@ export const addResource = async (
           where: (resource, { eq, and, or }) =>
             or(
               and(
-                eq(resource.subCategoryId, subCategoryId),
+                isNumeric(subCategoryId)
+                  ? eq(resource.subCategoryId, subCategoryId)
+                  : undefined,
                 sql`lower(${resource.title}) = lower(${title})`
               ),
               and(
-                eq(resource.subCategoryId, subCategoryId),
+                isNumeric(subCategoryId)
+                  ? eq(resource.subCategoryId, subCategoryId)
+                  : undefined,
                 eq(resource.url, url)
               )
             ),
@@ -222,7 +229,7 @@ export const addResource = async (
           return failure(res, {
             message:
               "A resource with this same title or url already exists in this sub category",
-            status: 400,
+            status: 409,
           });
         }
       }
@@ -249,7 +256,7 @@ export const addResource = async (
     const categoryExists = await db.query.categoryTable.findFirst({
       where: (category, { or, eq }) =>
         or(
-          eq(category.id, categoryId),
+          isNumeric(categoryId) ? eq(category.id, categoryId) : undefined,
           sql`lower(${category.name}) = lower(${categoryId})`
         ),
     });
@@ -261,7 +268,9 @@ export const addResource = async (
         where: (subCategory, { and, or, eq }) =>
           and(
             or(
-              eq(subCategory.id, subCategoryId),
+              isNumeric(subCategoryId)
+                ? eq(subCategory.id, subCategoryId)
+                : undefined,
               sql`lower(${subCategory.name}) = lower(${subCategoryId})`
             ),
             eq(subCategory.categoryId, categoryExists.id)
@@ -286,7 +295,7 @@ export const addResource = async (
 
         if (resourceExists) {
           return failure(res, {
-            status: 400,
+            status: 409,
             message:
               "A resource with this same title or url already exists in this sub category",
           });
@@ -316,7 +325,7 @@ export const addResource = async (
       return failure(res, {
         message:
           "A resource with this same information has already been added and is awaiting for approval",
-        status: 400,
+        status: 409,
       });
     }
 
