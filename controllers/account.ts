@@ -12,6 +12,7 @@ import { refreshTokenTable } from "../db/schemas/refreshToken";
 import { generateAccessToken, generateRefreshToken } from "../utils/token";
 import { failure, success } from "../utils/responses";
 import argon2 from "argon2";
+import getCurrentUTCDate from "../utils/getCurrentUTCDate";
 
 export const forgotPassword = async (
   req: Request,
@@ -160,7 +161,7 @@ export const resetPassword = async (
       .where(
         and(
           eq(forgotPasswordTable.token, token),
-          gt(forgotPasswordTable.expiresAt, new Date())
+          gt(forgotPasswordTable.expiresAt, getCurrentUTCDate())
         )
       );
 
@@ -207,7 +208,7 @@ export const resetPassword = async (
         password: hashedPassword,
         isOAuth: false,
         emailVerified: true,
-        updatedAt: new Date(),
+        updatedAt: getCurrentUTCDate(),
       })
       .where(eq(userTable.id, userExists[0].id));
     await db

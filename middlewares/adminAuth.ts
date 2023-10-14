@@ -6,7 +6,7 @@ import { db } from "../db";
 import { userTable } from "../db/schemas/user";
 import { eq } from "drizzle-orm";
 
-export const authMiddleware = async (
+export const adminAuthMiddleware = async (
   req: any,
   res: any,
   next: NextFunction
@@ -45,6 +45,14 @@ export const authMiddleware = async (
       return failure(res, {
         status: 401,
         message: "Invalid user",
+      });
+    }
+
+    // if the user is not an admin
+    if (!user[0].isAdmin) {
+      return failure(res, {
+        status: 403,
+        message: "Forbidden",
       });
     }
 

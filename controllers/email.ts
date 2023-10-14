@@ -7,6 +7,7 @@ import { and, eq, gt } from "drizzle-orm";
 import { emailVerificationTable } from "../db/schemas/emailVerification";
 import createRandomToken from "../utils/createRandomToken";
 import nodemailer from "nodemailer";
+import getCurrentUTCDate from "../utils/getCurrentUTCDate";
 
 // email verify
 export const emailVerify = async (
@@ -66,7 +67,7 @@ export const emailVerify = async (
         and(
           eq(emailVerificationTable.userId, userExists[0].id),
           eq(emailVerificationTable.token, token),
-          gt(emailVerificationTable.expiresAt, new Date())
+          gt(emailVerificationTable.expiresAt, getCurrentUTCDate())
         )
       );
 
@@ -83,7 +84,7 @@ export const emailVerify = async (
       .update(userTable)
       .set({
         emailVerified: true,
-        updatedAt: new Date(),
+        updatedAt: getCurrentUTCDate(),
       })
       .where(eq(userTable.id, userExists[0].id));
 
@@ -115,6 +116,7 @@ export const resendVerifyEmail = async (
       });
     }
 
+    // to prevent email attack
     // // check if prev email verification is still valid
     // const emailVerification = await db
     //   .select()
@@ -122,7 +124,7 @@ export const resendVerifyEmail = async (
     //   .where(
     //     and(
     //       eq(emailVerificationTable.userId, user.id),
-    //       gt(emailVerificationTable.expiresAt, new Date())
+    //       gt(emailVerificationTable.expiresAt, getCurrentUTCDate())
     //     )
     //   );
 

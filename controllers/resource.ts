@@ -2,22 +2,47 @@ import { NextFunction, Request, Response } from "express";
 import { failure, success } from "../utils/responses";
 import validator from "validator";
 import {
-  RESOURCES_IMG_DIR_NAME,
   RESOURCE_DESCRIPTION_MAX_LENGTH,
-  RESOURCE_SIZE,
   RESOURCE_TITLE_MAX_LENGTH,
 } from "../config";
 import { db } from "../db";
+import { categoryTable } from "../db/schemas/category";
+import { subCategoryTable } from "../db/schemas/subCategory";
 import { resourceTable } from "../db/schemas/resource";
-import { saveFile } from "../utils/file";
+import { tempResourceTable } from "../db/schemas/tempResource";
+import { sql } from "drizzle-orm";
 
+// get all resources for a sub category
 export const getResources = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
+  const { id } = req.params;
+
+  if (!id) {
+    return failure(res, {
+      message: "sub category id is required",
+      status: 400,
+    });
+  }
+
+  // check if sub category exists
+  const subCategoryExists = await db.query.subCategoryTable.findFirst({
+    where: (subCategory, { eq }) => eq(subCategory.id, parseInt(id)),
+  });
+
+  if (!subCategoryExists) {
+    return failure(res, {
+      message: "Sub Category not found",
+      status: 404,
+    });
+  }
+
   try {
     const resources = await db.query.resourceTable.findMany({
+      where: (resource, { eq }) =>
+        eq(resource.subCategoryId, subCategoryExists.id),
       with: {
         user: true,
         subCategory: {
@@ -26,7 +51,6 @@ export const getResources = async (
           },
         },
       },
-      where: (resource, { eq }) => eq(resource.isDraft, false),
     });
 
     return success(res, {
@@ -44,9 +68,8 @@ export const addResource = async (
   next: NextFunction
 ) => {
   try {
-    // img, title, description, url, category, sub category
+    // title, description, url, category, sub category
     let { url, title, description, categoryId, subCategoryId } = req.body;
-    let img = req.file;
 
     // validations
     // url
@@ -92,7 +115,7 @@ export const addResource = async (
     // categoryId
     if (!categoryId) {
       return failure(res, {
-        message: "Category is required",
+        message: "categoryId is required",
         status: 400,
       });
     }
@@ -100,54 +123,216 @@ export const addResource = async (
     // subCategoryId
     if (!subCategoryId) {
       return failure(res, {
-        message: "Subcategory is required",
+        message: "subCategoryId is required",
         status: 400,
       });
     }
 
-    // category can be either new or existing one
-    // check if that category exists
-    const categoryExists = await db.query.categoryTable.findFirst({
-      where: (category, { eq }) => eq(category.id, categoryId),
-    });
+    // trim and escape values
+    url = url.trim();
+    title = validator.escape(title.trim());
+    description = validator.escape(description.trim());
+    categoryId = validator.escape(categoryId.trim());
+    subCategoryId = validator.escape(subCategoryId.trim());
 
-    if (!categoryExists) {
-      // if not exists, then new this is new category and categoryId will be the name
-      return;
+    // if the submitting person is an admin
+    if (req.user.isAdmin) {
+      let isSubCategoryNew = false;
+
+      // check if category exists or a new one
+      const categoryExists = await db.query.categoryTable.findFirst({
+        where: (category, { or, eq }) =>
+          or(
+            eq(category.id, categoryId),
+            sql`lower(${category.name}) = lower(${categoryId})`
+          ),
+      });
+
+      if (!categoryExists) {
+        // categoryId would be the name instead of id
+        // create the category and subCategory
+        const newCategory = await db
+          .insert(categoryTable)
+          .values({
+            name: categoryId,
+          })
+          .returning();
+
+        // create new sub category
+        const newSubCategory = await db
+          .insert(subCategoryTable)
+          .values({
+            name: subCategoryId,
+            categoryId: newCategory[0].id,
+          })
+          .returning();
+
+        categoryId = newCategory[0].id;
+        subCategoryId = newSubCategory[0].id;
+
+        isSubCategoryNew = true;
+      } else {
+        // category exists
+        // check if this subCategory exists or a whether it is a new one in that category
+        const subCategoryExists = await db.query.subCategoryTable.findFirst({
+          where: (subCategory, { and, or, eq }) =>
+            and(
+              or(
+                eq(subCategory.id, subCategoryId),
+                sql`lower(${subCategory.name}) = lower(${subCategoryId})`
+              ),
+              eq(subCategory.categoryId, categoryExists.id)
+            ),
+        });
+
+        if (!subCategoryExists) {
+          // create new sub category
+          const newSubCategory = await db
+            .insert(subCategoryTable)
+            .values({
+              name: subCategoryId,
+              categoryId: categoryExists.id,
+            })
+            .returning();
+
+          subCategoryId = newSubCategory[0].id;
+
+          isSubCategoryNew = true;
+        }
+      }
+
+      // if it is not a new sub category
+      if (!isSubCategoryNew) {
+        // check if resource is unique in this sub category
+        const resourceExists = await db.query.resourceTable.findFirst({
+          where: (resource, { eq, and, or }) =>
+            or(
+              and(
+                eq(resource.subCategoryId, subCategoryId),
+                sql`lower(${resource.title}) = lower(${title})`
+              ),
+              and(
+                eq(resource.subCategoryId, subCategoryId),
+                eq(resource.url, url)
+              )
+            ),
+        });
+
+        if (resourceExists) {
+          return failure(res, {
+            message:
+              "A resource with this same title or url already exists in this sub category",
+            status: 400,
+          });
+        }
+      }
+
+      // add resource
+      await db.insert(resourceTable).values({
+        url,
+        title,
+        userId: req.user.id,
+        description,
+        subCategoryId,
+      });
+
+      return success(res, {
+        message: "Resource added successfully",
+        status: 201,
+      });
     }
 
-    // subcategory may exist or maynot exist
-    // check if that subCategory is valid
-    const subCategoryExists = await db.query.subCategoryTable.findFirst({
-      where: (subCategory, { eq, and }) =>
-        and(
-          eq(subCategory.id, subCategoryId),
-          eq(subCategory.categoryId, categoryExists.id)
+    // if normal user
+    // check if it is already present in resource table
+
+    // check if category exists or a new one
+    const categoryExists = await db.query.categoryTable.findFirst({
+      where: (category, { or, eq }) =>
+        or(
+          eq(category.id, categoryId),
+          sql`lower(${category.name}) = lower(${categoryId})`
         ),
     });
 
-    if (!subCategoryExists) {
-      // if not exists, then this is new sub category and subCategoryId will be the name
-      return;
+    if (categoryExists) {
+      // category exists
+      // check if this subCategory exists or a whether it is a new one in that category
+      const subCategoryExists = await db.query.subCategoryTable.findFirst({
+        where: (subCategory, { and, or, eq }) =>
+          and(
+            or(
+              eq(subCategory.id, subCategoryId),
+              sql`lower(${subCategory.name}) = lower(${subCategoryId})`
+            ),
+            eq(subCategory.categoryId, categoryExists.id)
+          ),
+      });
+
+      if (subCategoryExists) {
+        // check if resource is unique in this sub category
+        const resourceExists = await db.query.resourceTable.findFirst({
+          where: (resource, { eq, and, or }) =>
+            or(
+              and(
+                eq(resource.subCategoryId, subCategoryExists.id),
+                sql`lower(${resource.title}) = lower(${title})`
+              ),
+              and(
+                eq(resource.subCategoryId, subCategoryExists.id),
+                eq(resource.url, url)
+              )
+            ),
+        });
+
+        if (resourceExists) {
+          return failure(res, {
+            status: 400,
+            message:
+              "A resource with this same title or url already exists in this sub category",
+          });
+        }
+      }
     }
 
-    const fileName = await saveFile(
-      img,
-      RESOURCE_SIZE.WIDTH,
-      RESOURCE_SIZE.HEIGHT,
-      RESOURCES_IMG_DIR_NAME
-    );
+    // this resource doesn't exist in resourceTable
+    // now check in tempResourceTable if entry is unique or not (to prevent duplicate entries)
+    const tempResourceExists = await db.query.tempResourceTable.findFirst({
+      where: (tempResource, { eq, and, or }) =>
+        or(
+          and(
+            sql`lower(${tempResource.category}) = lower(${categoryId})`,
+            sql`lower(${tempResource.subCategory}) = lower(${subCategoryId})`,
+            sql`lower(${tempResource.title}) = lower(${title})`
+          ),
+          and(
+            sql`lower(${tempResource.category}) = lower(${categoryId})`,
+            sql`lower(${tempResource.subCategory}) = lower(${subCategoryId})`,
+            eq(tempResource.url, url)
+          )
+        ),
+    });
 
-    await db.insert(resourceTable).values({
-      title: validator.escape(title.trim()),
-      description: validator.escape(description.trim()),
-      url: url.trim(),
-      subCategoryId: subCategoryExists.id,
-      userId: req.user?.id,
+    if (tempResourceExists) {
+      return failure(res, {
+        message:
+          "A resource with this same information has already been added and is awaiting for approval",
+        status: 400,
+      });
+    }
+
+    // completely new entry
+    // add the data to the tempResource
+    await db.insert(tempResourceTable).values({
+      url,
+      title,
+      description,
+      userId: req.user.id,
+      category: categoryId,
+      subCategory: subCategoryId,
     });
 
     return success(res, {
-      message: "Resource added successfully",
+      message: "Your submission is in, awaiting our thumbs up 👍!",
       status: 201,
     });
   } catch (err) {

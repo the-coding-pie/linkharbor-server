@@ -8,6 +8,7 @@ import {
 import { EMAIL_TOKEN_LENGTH } from "../../config";
 import { add } from "date-fns";
 import { userTable } from "./user";
+import getCurrentUTCDate from "../../utils/getCurrentUTCDate";
 
 export const emailVerificationTable = pgTable("email_verification", {
   id: serial("id").primaryKey(),
@@ -17,7 +18,7 @@ export const emailVerificationTable = pgTable("email_verification", {
     .references(() => userTable.id),
   token: varchar("token", { length: EMAIL_TOKEN_LENGTH }).notNull(),
   expiresAt: timestamp("expires_at").default(
-    add(new Date(), {
+    add(getCurrentUTCDate(), {
       minutes: 30,
     })
   ),

@@ -8,13 +8,12 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { userTable } from "./user";
-import { subCategoryTable } from "./subCategory";
 import {
   RESOURCE_DESCRIPTION_MAX_LENGTH,
   RESOURCE_TITLE_MAX_LENGTH,
 } from "../../config";
 
-export const resourceTable = pgTable("resource", {
+export const tempResourceTable = pgTable("temp_resource", {
   id: serial("id").primaryKey(),
   url: text("url").notNull(),
   title: varchar("title", { length: RESOURCE_TITLE_MAX_LENGTH }).notNull(),
@@ -24,20 +23,18 @@ export const resourceTable = pgTable("resource", {
   userId: integer("user_id")
     .notNull()
     .references(() => userTable.id),
-  subCategoryId: integer("subcategory_id")
-    .notNull()
-    .references(() => subCategoryTable.id),
+  category: text("category").notNull(),
+  subCategory: text("subcategory").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const resourceTableRelations = relations(resourceTable, ({ one }) => ({
-  user: one(userTable, {
-    fields: [resourceTable.userId],
-    references: [userTable.id],
-  }),
-  subCategory: one(subCategoryTable, {
-    fields: [resourceTable.subCategoryId],
-    references: [subCategoryTable.id],
-  }),
-}));
+export const tempResourceTableRelations = relations(
+  tempResourceTable,
+  ({ one }) => ({
+    user: one(userTable, {
+      fields: [tempResourceTable.userId],
+      references: [userTable.id],
+    }),
+  })
+);

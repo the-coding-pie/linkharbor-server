@@ -6,7 +6,6 @@ import { resourceTable } from "./resource";
 export const subCategoryTable = pgTable("sub_category", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 200 }).notNull(),
-  slug: varchar("slug", { length: 255 }).notNull(),
   categoryId: integer("category_id")
     .notNull()
     .references(() => categoryTable.id),

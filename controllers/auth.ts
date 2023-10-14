@@ -15,6 +15,7 @@ import { refreshTokenTable } from "../db/schemas/refreshToken";
 import { OAuth2Client } from "google-auth-library";
 import jwt from "jsonwebtoken";
 import { failure, success } from "../utils/responses";
+import getCurrentUTCDate from "../utils/getCurrentUTCDate";
 
 export const refreshToken = async (
   req: Request,
@@ -169,7 +170,7 @@ export const registerUser = async (
         .where(
           and(
             eq(emailVerificationTable.userId, userExists[0].id),
-            gt(emailVerificationTable.expiresAt, new Date())
+            gt(emailVerificationTable.expiresAt, getCurrentUTCDate())
           )
         );
 
