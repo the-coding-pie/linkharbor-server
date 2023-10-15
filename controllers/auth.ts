@@ -128,27 +128,34 @@ export const registerUser = async (
         status: 400,
         message: "Password must be at least 8 characters long",
       });
-    } else if (!/[A-Z]/.test(password)) {
+    } else if (!/\d/.test(password) || !/[a-zA-Z]/.test(password)) {
+      // check if password has atleast one digit and one letter
       return failure(res, {
         status: 400,
-        message: "Password must contain at least one uppercase letter",
-      });
-    } else if (!/[a-z]/.test(password)) {
-      return failure(res, {
-        status: 400,
-        message: "Password must contain at least one lowercase letter",
-      });
-    } else if (!/[0-9]/.test(password)) {
-      return failure(res, {
-        status: 400,
-        message: "Password must contain at least one digit",
-      });
-    } else if (!/[!@#$%^&*]/.test(password)) {
-      return failure(res, {
-        status: 400,
-        message: "Password must contain at least special character",
+        message: "Password must contain at least one letter and one number",
       });
     }
+    // else if (!/[A-Z]/.test(password)) {
+    //   return failure(res, {
+    //     status: 400,
+    //     message: "Password must contain at least one uppercase letter",
+    //   });
+    // } else if (!/[a-z]/.test(password)) {
+    //   return failure(res, {
+    //     status: 400,
+    //     message: "Password must contain at least one lowercase letter",
+    //   });
+    // } else if (!/[0-9]/.test(password)) {
+    //   return failure(res, {
+    //     status: 400,
+    //     message: "Password must contain at least one digit",
+    //   });
+    // } else if (!/[!@#$%^&*]/.test(password)) {
+    //   return failure(res, {
+    //     status: 400,
+    //     message: "Password must contain at least special character",
+    //   });
+    // }
 
     // trim all values
     name = name.trim();
@@ -198,7 +205,7 @@ export const registerUser = async (
     }
 
     // create new user
-    const username = genUsername();
+    const username = await genUsername();
     const hashedPassword = await argon2.hash(password);
 
     const newUser = await db
@@ -286,11 +293,6 @@ export const loginUser = async (
       return failure(res, {
         status: 400,
         message: "Email/Username is required",
-      });
-    } else if (!validator.isEmail(email)) {
-      return failure(res, {
-        status: 400,
-        message: "Invalid email/username",
       });
     }
 
@@ -392,7 +394,7 @@ export const googleAuth = async (
 
     if (userExists.length === 0) {
       // create valid username
-      const username = genUsername();
+      const username = await genUsername();
 
       const newUser = await db
         .insert(userTable)
@@ -431,7 +433,7 @@ export const googleAuth = async (
           .where(eq(emailVerificationTable.userId, userExists[0].id));
 
         // create valid username
-        const username = genUsername();
+        const username = await genUsername();
 
         const newUser = await db
           .insert(userTable)

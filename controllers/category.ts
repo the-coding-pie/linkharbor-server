@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { db } from "../db";
 import { failure, success } from "../utils/responses";
 import isNumeric from "../utils/isNumeric";
+import categorizeByAlphabet from "../utils/categorizeByAlphabet";
 
 export const getCategories = async (
   req: Request,
@@ -14,8 +15,10 @@ export const getCategories = async (
       orderBy: (category, { asc }) => asc(category.name),
     });
 
+    const groupedByAlphabets = categorizeByAlphabet(categories);
+
     return success(res, {
-      data: categories,
+      data: groupedByAlphabets,
     });
   } catch (err) {
     next(err);

@@ -11,6 +11,8 @@ import { resourceTable } from "./resource";
 import { emailVerificationTable } from "./emailVerification";
 import { forgotPasswordTable } from "./forgotPassword";
 import { refreshTokenTable } from "./refreshToken";
+import { voteTable } from "./vote";
+import getCurrentUTCDate from "../../utils/getCurrentUTCDate";
 
 export const userTable = pgTable("user", {
   id: serial("id").primaryKey(),
@@ -22,8 +24,8 @@ export const userTable = pgTable("user", {
   isOAuth: boolean("is_oauth").default(false).notNull(),
   emailVerified: boolean("emailVerified").default(false).notNull(),
   isAdmin: boolean("is_admin").default(false).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").default(getCurrentUTCDate()).notNull(),
+  updatedAt: timestamp("updated_at").default(getCurrentUTCDate()).notNull(),
 });
 
 export const userTableRelations = relations(userTable, ({ many, one }) => ({
@@ -40,4 +42,5 @@ export const userTableRelations = relations(userTable, ({ many, one }) => ({
     fields: [userTable.id],
     references: [refreshTokenTable.userId],
   }),
+  votes: many(voteTable),
 }));

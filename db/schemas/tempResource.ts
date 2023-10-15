@@ -12,6 +12,7 @@ import {
   RESOURCE_DESCRIPTION_MAX_LENGTH,
   RESOURCE_TITLE_MAX_LENGTH,
 } from "../../config";
+import getCurrentUTCDate from "../../utils/getCurrentUTCDate";
 
 export const tempResourceTable = pgTable("temp_resource", {
   id: serial("id").primaryKey(),
@@ -25,8 +26,8 @@ export const tempResourceTable = pgTable("temp_resource", {
     .references(() => userTable.id),
   category: text("category").notNull(),
   subCategory: text("subcategory").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").default(getCurrentUTCDate()).notNull(),
+  updatedAt: timestamp("updated_at").default(getCurrentUTCDate()).notNull(),
 });
 
 export const tempResourceTableRelations = relations(

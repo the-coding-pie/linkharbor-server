@@ -1,7 +1,14 @@
 import { relations } from "drizzle-orm";
-import { integer, pgTable, serial, varchar } from "drizzle-orm/pg-core";
+import {
+  integer,
+  pgTable,
+  serial,
+  timestamp,
+  varchar,
+} from "drizzle-orm/pg-core";
 import { categoryTable } from "./category";
 import { resourceTable } from "./resource";
+import getCurrentUTCDate from "../../utils/getCurrentUTCDate";
 
 export const subCategoryTable = pgTable("sub_category", {
   id: serial("id").primaryKey(),
@@ -9,6 +16,8 @@ export const subCategoryTable = pgTable("sub_category", {
   categoryId: integer("category_id")
     .notNull()
     .references(() => categoryTable.id),
+  createdAt: timestamp("created_at").default(getCurrentUTCDate()).notNull(),
+  updatedAt: timestamp("updated_at").default(getCurrentUTCDate()).notNull(),
 });
 
 export const subCategoryTableRelations = relations(

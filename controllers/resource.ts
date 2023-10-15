@@ -10,8 +10,10 @@ import { categoryTable } from "../db/schemas/category";
 import { subCategoryTable } from "../db/schemas/subCategory";
 import { resourceTable } from "../db/schemas/resource";
 import { tempResourceTable } from "../db/schemas/tempResource";
-import { sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import isNumeric from "../utils/isNumeric";
+import { voteTable } from "../db/schemas/vote";
+import { userTable } from "../db/schemas/user";
 
 // get all resources for a sub category
 export const getResources = async (
@@ -19,25 +21,25 @@ export const getResources = async (
   res: Response,
   next: NextFunction
 ) => {
-  const { id } = req.params;
+  const { subCategoryId } = req.params;
 
-  if (!id) {
+  if (!subCategoryId) {
     return failure(res, {
-      message: "sub category id is required",
+      message: "subCategoryId is required",
       status: 400,
     });
   }
 
-  if (!isNumeric(id)) {
+  if (!isNumeric(subCategoryId)) {
     return failure(res, {
-      message: "sub category id should be a number",
+      message: "subCategoryId should be a number",
       status: 400,
     });
   }
 
   // check if sub category exists
   const subCategoryExists = await db.query.subCategoryTable.findFirst({
-    where: (subCategory, { eq }) => eq(subCategory.id, parseInt(id)),
+    where: (subCategory, { eq }) => eq(subCategory.id, parseInt(subCategoryId)),
   });
 
   if (!subCategoryExists) {
@@ -48,18 +50,44 @@ export const getResources = async (
   }
 
   try {
-    const resources = await db.query.resourceTable.findMany({
-      where: (resource, { eq }) =>
-        eq(resource.subCategoryId, subCategoryExists.id),
-      with: {
-        user: true,
-        subCategory: {
-          with: {
-            category: true,
-          },
+    const resources = await db
+      .select({
+        id: resourceTable.id,
+        url: resourceTable.url,
+        title: resourceTable.title,
+        description: resourceTable.description,
+        createdAt: resourceTable.createdAt,
+        updatedAt: resourceTable.updatedAt,
+        user: {
+          name: userTable.name,
+          username: userTable.username,
+          profile: userTable.profile,
         },
-      },
-    });
+        subCategory: {
+          id: subCategoryTable.id,
+          name: subCategoryTable.name,
+        },
+        category: {
+          id: categoryTable.id,
+          name: categoryTable.name,
+        },
+        voteCount: sql<number>`count(${voteTable.id})`.mapWith(Number),
+      })
+      .from(resourceTable)
+      .leftJoin(userTable, eq(userTable.id, resourceTable.userId))
+      .leftJoin(
+        subCategoryTable,
+        eq(subCategoryTable.id, resourceTable.subCategoryId)
+      )
+      .leftJoin(
+        categoryTable,
+        eq(categoryTable.id, subCategoryTable.categoryId)
+      )
+      .leftJoin(voteTable, eq(voteTable.resourceId, resourceTable.id))
+      .groupBy(
+        sql`${resourceTable.id}, ${userTable.name}, ${userTable.username}, ${userTable.profile}, ${subCategoryTable.id}, ${categoryTable.id}`
+      )
+      .orderBy(sql`count(${voteTable.id}) DESC`); // Sort by vote count in descending order
 
     return success(res, {
       data: resources,
@@ -350,6 +378,69 @@ export const addResource = async (
     return success(res, {
       message: "Your submission is in, awaiting our thumbs up 👍!",
       status: 201,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+// toggle vote for the resource
+export const toggleVote = async (
+  req: any,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return failure(res, {
+        message: "category id is required",
+        status: 400,
+      });
+    }
+
+    if (!isNumeric(id)) {
+      return failure(res, {
+        message: "category id should be a number",
+        status: 400,
+      });
+    }
+
+    // check if it is a valid resource
+    const resourceExists = await db.query.resourceTable.findFirst({
+      where: (resource, { eq }) => eq(resource.id, parseInt(id)),
+    });
+
+    if (!resourceExists) {
+      return failure(res, {
+        message: "Resource with this id not found",
+        status: 404,
+      });
+    }
+
+    // if user already upvoted it, then downvote it, or else upvote it
+    const voteExists = await db.query.voteTable.findFirst({
+      where: (vote, { eq, and }) =>
+        and(
+          eq(vote.userId, req.user.id),
+          eq(vote.resourceId, resourceExists.id)
+        ),
+    });
+
+    if (voteExists) {
+      // remove it
+      await db.delete(voteTable).where(eq(voteTable.id, voteExists.id));
+    } else {
+      // add it
+      await db.insert(voteTable).values({
+        userId: req.user.id,
+        resourceId: resourceExists.id,
+      });
+    }
+
+    return success(res, {
+      status: 200,
+      message: "Vote updated successfully",
     });
   } catch (err) {
     next(err);

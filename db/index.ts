@@ -9,6 +9,7 @@ import * as resourceSchema from "./schemas/resource";
 import * as categorySchema from "./schemas/category";
 import * as subCategorySchema from "./schemas/subCategory";
 import * as tempResourceSchema from "./schemas/tempResource";
+import * as voteSchema from "./schemas/vote";
 
 // dotenv
 import "dotenv/config";
@@ -33,5 +34,6 @@ export const db = drizzle(queryClient, {
     ...categorySchema,
     ...subCategorySchema,
     ...tempResourceSchema,
+    ...voteSchema,
   },
 });

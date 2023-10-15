@@ -13,6 +13,8 @@ import {
   RESOURCE_DESCRIPTION_MAX_LENGTH,
   RESOURCE_TITLE_MAX_LENGTH,
 } from "../../config";
+import { voteTable } from "./vote";
+import getCurrentUTCDate from "../../utils/getCurrentUTCDate";
 
 export const resourceTable = pgTable("resource", {
   id: serial("id").primaryKey(),
@@ -27,17 +29,21 @@ export const resourceTable = pgTable("resource", {
   subCategoryId: integer("subcategory_id")
     .notNull()
     .references(() => subCategoryTable.id),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").default(getCurrentUTCDate()).notNull(),
+  updatedAt: timestamp("updated_at").default(getCurrentUTCDate()).notNull(),
 });
 
-export const resourceTableRelations = relations(resourceTable, ({ one }) => ({
-  user: one(userTable, {
-    fields: [resourceTable.userId],
-    references: [userTable.id],
-  }),
-  subCategory: one(subCategoryTable, {
-    fields: [resourceTable.subCategoryId],
-    references: [subCategoryTable.id],
-  }),
-}));
+export const resourceTableRelations = relations(
+  resourceTable,
+  ({ one, many }) => ({
+    user: one(userTable, {
+      fields: [resourceTable.userId],
+      references: [userTable.id],
+    }),
+    subCategory: one(subCategoryTable, {
+      fields: [resourceTable.subCategoryId],
+      references: [subCategoryTable.id],
+    }),
+    votes: many(voteTable),
+  })
+);

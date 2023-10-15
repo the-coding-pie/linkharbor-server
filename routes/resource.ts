@@ -14,6 +14,14 @@ resourceRouter.post(
 );
 
 // GET /resources -> get all resources of a sub category
-resourceRouter.get("/:id", resourceController.getResources);
+resourceRouter.get("/:subCategoryId", resourceController.getResources);
+
+// PUT /resources/:id/vote -> toggle vote
+resourceRouter.put(
+  "/:id/vote",
+  authMiddleware,
+  emailVerifiedMiddleware,
+  resourceController.toggleVote
+);
 
 export default resourceRouter;
