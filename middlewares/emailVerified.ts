@@ -9,7 +9,7 @@ export const emailVerifiedMiddleware = async (
   // if the user has not verified email
   if (!req?.user?.emailVerified) {
     return failure(res, {
-      status: 401,
+      status: 403,
       message: "Please verify your email before continue",
     });
   } else {

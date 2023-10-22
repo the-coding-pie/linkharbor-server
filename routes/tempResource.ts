@@ -11,7 +11,7 @@ tempResourceRouter.post(
   tempResourceController.approveTempResource
 );
 
-// Protected(Auth + Admin) DELETE /temp-resources/:id/approve/ -> add a resource
+// Protected(Auth + Admin) DELETE /temp-resources/:id -> delete a tempResource
 tempResourceRouter.delete(
   "/:id",
   adminAuthMiddleware,

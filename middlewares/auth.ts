@@ -31,6 +31,7 @@ export const authMiddleware = async (
       .select({
         id: userTable.id,
         username: userTable.username,
+        name: userTable.name,
         profile: userTable.profile,
         email: userTable.email,
         isAdmin: userTable.isAdmin,
