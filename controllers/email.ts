@@ -8,6 +8,7 @@ import { emailVerificationTable } from "../db/schemas/emailVerification";
 import createRandomToken from "../utils/createRandomToken";
 import nodemailer from "nodemailer";
 import getCurrentUTCDate from "../utils/getCurrentUTCDate";
+import { add } from "date-fns";
 
 // email verify
 export const emailVerify = async (
@@ -117,23 +118,23 @@ export const resendVerifyEmail = async (
     }
 
     // to prevent email attack
-    // // check if prev email verification is still valid
-    // const emailVerification = await db
-    //   .select()
-    //   .from(emailVerificationTable)
-    //   .where(
-    //     and(
-    //       eq(emailVerificationTable.userId, user.id),
-    //       gt(emailVerificationTable.expiresAt, getCurrentUTCDate())
-    //     )
-    //   );
+    // check if prev email verification is still valid
+    const emailVerification = await db
+      .select()
+      .from(emailVerificationTable)
+      .where(
+        and(
+          eq(emailVerificationTable.userId, user.id),
+          gt(emailVerificationTable.expiresAt, getCurrentUTCDate())
+        )
+      );
 
-    // if (emailVerification.length > 0) {
-    //   // still the old email verification is valid
-    //   return success(res, {
-    //     message: "Please check your email!",
-    //   });
-    // }
+    if (emailVerification.length > 0) {
+      // still the old email verification is valid
+      return success(res, {
+        message: "Email resent!",
+      });
+    }
 
     // delete old record in emailVerification collection if any exists
     await db
@@ -148,6 +149,9 @@ export const resendVerifyEmail = async (
       .values({
         userId: user.id,
         token: newRandomToken,
+        expiresAt: add(getCurrentUTCDate(), {
+          minutes: 30,
+        }),
       })
       .returning();
 

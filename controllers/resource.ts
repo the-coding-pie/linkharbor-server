@@ -10,14 +10,14 @@ import { categoryTable } from "../db/schemas/category";
 import { subCategoryTable } from "../db/schemas/subCategory";
 import { resourceTable } from "../db/schemas/resource";
 import { tempResourceTable } from "../db/schemas/tempResource";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, exists, sql } from "drizzle-orm";
 import isNumeric from "../utils/isNumeric";
 import { voteTable } from "../db/schemas/vote";
 import { userTable } from "../db/schemas/user";
 
 // get all resources for a sub category
 export const getResources = async (
-  req: Request,
+  req: any,
   res: Response,
   next: NextFunction
 ) => {
@@ -72,6 +72,21 @@ export const getResources = async (
           id: categoryTable.id,
           name: categoryTable.name,
         },
+        ...(req?.user
+          ? {
+              hasUpVoted: exists(
+                db
+                  .select()
+                  .from(voteTable)
+                  .where(
+                    and(
+                      eq(voteTable.userId, req?.user?.id),
+                      eq(voteTable.resourceId, resourceTable.id)
+                    )
+                  )!
+              ),
+            }
+          : {}),
         voteCount: sql<number>`count(${voteTable.id})`.mapWith(Number),
       })
       .from(resourceTable)
