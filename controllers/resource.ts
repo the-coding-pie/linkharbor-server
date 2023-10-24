@@ -10,7 +10,7 @@ import { categoryTable } from "../db/schemas/category";
 import { subCategoryTable } from "../db/schemas/subCategory";
 import { resourceTable } from "../db/schemas/resource";
 import { tempResourceTable } from "../db/schemas/tempResource";
-import { desc, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import isNumeric from "../utils/isNumeric";
 import { voteTable } from "../db/schemas/vote";
 import { userTable } from "../db/schemas/user";
@@ -62,6 +62,7 @@ export const getResources = async (
           name: userTable.name,
           username: userTable.username,
           profile: userTable.profile,
+          joinedOn: userTable.createdAt,
         },
         subCategory: {
           id: subCategoryTable.id,
@@ -74,6 +75,7 @@ export const getResources = async (
         voteCount: sql<number>`count(${voteTable.id})`.mapWith(Number),
       })
       .from(resourceTable)
+      .where(eq(resourceTable.subCategoryId, subCategoryExists.id))
       .leftJoin(userTable, eq(userTable.id, resourceTable.userId))
       .leftJoin(
         subCategoryTable,
@@ -85,7 +87,7 @@ export const getResources = async (
       )
       .leftJoin(voteTable, eq(voteTable.resourceId, resourceTable.id))
       .groupBy(
-        sql`${resourceTable.id}, ${userTable.name}, ${userTable.username}, ${userTable.profile}, ${subCategoryTable.id}, ${categoryTable.id}`
+        sql`${resourceTable.id}, ${userTable.name}, ${userTable.username}, ${userTable.profile}, ${userTable.createdAt}, ${subCategoryTable.id}, ${categoryTable.id}`
       )
       .orderBy(sql`count(${voteTable.id}) DESC`); // Sort by vote count in descending order
 
@@ -168,8 +170,12 @@ export const addResource = async (
     url = url.trim();
     title = validator.escape(title.trim());
     description = validator.escape(description.trim());
-    categoryId = validator.escape(categoryId.trim());
-    subCategoryId = validator.escape(subCategoryId.trim());
+    categoryId = isNumeric(categoryId)
+      ? categoryId
+      : validator.escape(categoryId.trim());
+    subCategoryId = isNumeric(subCategoryId)
+      ? subCategoryId
+      : validator.escape(subCategoryId.trim());
 
     // if the submitting person is an admin
     if (req.user.isAdmin) {

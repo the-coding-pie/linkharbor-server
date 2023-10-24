@@ -74,3 +74,34 @@ export const getSubCategories = async (
     next(err);
   }
 };
+
+export const getCategoriesAndSubs = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const categories = await db.query.categoryTable.findMany({
+      orderBy: (category, { asc }) => asc(category.name),
+      columns: {
+        id: true,
+        name: true,
+      },
+      with: {
+        subCategories: {
+          orderBy: (subCategory, { asc }) => asc(subCategory.name),
+          columns: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    return success(res, {
+      data: categories,
+    });
+  } catch (err) {
+    next(err);
+  }
+};

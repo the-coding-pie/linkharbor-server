@@ -131,8 +131,12 @@ export const approveTempResource = async (
     url = url.trim();
     title = validator.escape(title.trim());
     description = validator.escape(description.trim());
-    categoryId = validator.escape(categoryId.trim());
-    subCategoryId = validator.escape(subCategoryId.trim());
+    categoryId = isNumeric(categoryId)
+      ? categoryId
+      : validator.escape(categoryId.trim());
+    subCategoryId = isNumeric(subCategoryId)
+      ? subCategoryId
+      : validator.escape(subCategoryId.trim());
 
     // convert that tempResource into resource
     let isSubCategoryNew = false;

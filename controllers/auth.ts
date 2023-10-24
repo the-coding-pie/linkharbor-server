@@ -16,6 +16,7 @@ import { OAuth2Client } from "google-auth-library";
 import jwt from "jsonwebtoken";
 import { failure, success } from "../utils/responses";
 import getCurrentUTCDate from "../utils/getCurrentUTCDate";
+import { PayloadObj } from "../types/interfaces";
 
 export const refreshToken = async (
   req: Request,
@@ -272,8 +273,19 @@ export const registerUser = async (
       data: {
         accessToken: newAccessToken,
         refreshToken: newRefreshToken,
+        user: {
+          id: newUser[0].id,
+          name: newUser[0].name,
+          username: newUser[0].username,
+          isAdmin: newUser[0].isAdmin,
+          isOAuth: newUser[0].isOAuth,
+          email: newUser[0].email,
+          emailVerified: newUser[0].emailVerified,
+          profile: newUser[0].profile,
+        },
       },
-      message: "Your account has been created successfully!",
+      message:
+        "Your account has been created successfully! Please verify your email.",
     });
   } catch (err) {
     next(err);
@@ -342,6 +354,16 @@ export const loginUser = async (
       data: {
         accessToken: newAccessToken,
         refreshToken: newRefreshToken,
+        user: {
+          id: userExists[0].id,
+          name: userExists[0].name,
+          username: userExists[0].username,
+          isAdmin: userExists[0].isAdmin,
+          isOAuth: userExists[0].isOAuth,
+          email: userExists[0].email,
+          emailVerified: userExists[0].emailVerified,
+          profile: userExists[0].profile,
+        },
       },
       message: "",
     });
@@ -357,27 +379,27 @@ export const googleAuth = async (
   next: NextFunction
 ) => {
   try {
-    let ticket;
+    let payload: PayloadObj | undefined = undefined;
 
-    const { tokenId } = req.body;
+    const { code } = req.body;
 
-    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+    const client = new OAuth2Client(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      process.env.GOOGLE_REDIRECT_URI
+    );
 
     // validate tokenId
     try {
-      ticket = await client.verifyIdToken({
-        idToken: tokenId,
-        audience: process.env.GOOGLE_CLIENT_ID,
-      });
-    } catch {
+      const { tokens } = await client.getToken(code);
+
+      payload = jwt.decode(tokens.id_token!) as PayloadObj;
+    } catch (err) {
       return failure(res, {
         status: 400,
         message: "Google OAuth failed",
       });
     }
-
-    // valid token
-    const payload = ticket!.getPayload()!;
 
     // register or login
     // send tokens
@@ -387,8 +409,9 @@ export const googleAuth = async (
       .select()
       .from(userTable)
       .limit(1)
-      .where(eq(userTable.email, payload.email!));
+      .where(eq(userTable.email, payload?.email!));
 
+    let user;
     let newAccessToken;
     let newRefreshToken;
 
@@ -415,6 +438,8 @@ export const googleAuth = async (
       newRefreshToken = await generateRefreshToken({
         id: newUser[0].id,
       });
+
+      user = newUser;
     } else {
       // emailVerified false (manual registration)
       if (userExists[0].emailVerified === false) {
@@ -454,6 +479,8 @@ export const googleAuth = async (
         newRefreshToken = await generateRefreshToken({
           id: newUser[0].id,
         });
+
+        user = newUser;
       } else {
         // user already verified email, so allow Google OAuth
         // generate tokens
@@ -463,6 +490,8 @@ export const googleAuth = async (
         newRefreshToken = await generateRefreshToken({
           id: userExists[0].id,
         });
+
+        user = userExists;
       }
     }
 
@@ -470,6 +499,16 @@ export const googleAuth = async (
       data: {
         accessToken: newAccessToken,
         refreshToken: newRefreshToken,
+        user: {
+          id: user[0].id,
+          name: user[0].name,
+          username: user[0].username,
+          isAdmin: user[0].isAdmin,
+          isOAuth: user[0].isOAuth,
+          email: user[0].email,
+          emailVerified: user[0].emailVerified,
+          profile: user[0].profile,
+        },
       },
       message: "Google OAuth successfull",
     });
