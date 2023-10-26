@@ -1,4 +1,5 @@
 import {
+  boolean,
   integer,
   pgTable,
   serial,
@@ -17,6 +18,7 @@ export const emailVerificationTable = pgTable("email_verification", {
     .unique()
     .references(() => userTable.id),
   token: varchar("token", { length: EMAIL_TOKEN_LENGTH }).notNull(),
+  emailSent: boolean("emailSent").default(true),
   expiresAt: timestamp("expires_at").default(
     add(getCurrentUTCDate(), {
       minutes: 30,

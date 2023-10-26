@@ -8,7 +8,7 @@ import { emailVerificationTable } from "../db/schemas/emailVerification";
 import createRandomToken from "../utils/createRandomToken";
 import nodemailer from "nodemailer";
 import getCurrentUTCDate from "../utils/getCurrentUTCDate";
-import { add } from "date-fns";
+import { add, isAfter } from "date-fns";
 
 // email verify
 export const emailVerify = async (
@@ -28,6 +28,7 @@ export const emailVerify = async (
       });
     }
 
+    // validate wuid
     // check if user is valid
     const userExists = await db
       .select()
@@ -59,7 +60,7 @@ export const emailVerify = async (
       });
     }
 
-    // check for a record in emailVerification collection
+    // token validation
     const emailVer = await db
       .select()
       .from(emailVerificationTable)
@@ -67,17 +68,30 @@ export const emailVerify = async (
       .where(
         and(
           eq(emailVerificationTable.userId, userExists[0].id),
-          eq(emailVerificationTable.token, token),
-          gt(emailVerificationTable.expiresAt, getCurrentUTCDate())
+          eq(emailVerificationTable.token, token)
         )
       );
 
     if (emailVer.length === 0) {
+      // no token exists
       return failure(res, {
         status: 400,
         message:
           "Sorry, your email validation link has expired or is malformed",
       });
+    } else {
+      // token exists, check if token expired
+      // edge case: if hacker got token somehow from db, then they directly hit this endpoint, if toke is valid, let them verify their email
+      if (isAfter(getCurrentUTCDate(), emailVer[0].expiresAt!)) {
+        return failure(res, {
+          status: 400,
+          data: {
+            resend: true,
+          },
+          message:
+            "Sorry, your email validation link has expired or is malformed",
+        });
+      }
     }
 
     // got valid token -> update user info and delete the record, then redirect user to client
@@ -118,14 +132,15 @@ export const resendVerifyEmail = async (
     }
 
     // to prevent email attack
-    // check if prev email verification is still valid
+    // check if prev "sent" email verification is still valid
     const emailVerification = await db
       .select()
       .from(emailVerificationTable)
       .where(
         and(
           eq(emailVerificationTable.userId, user.id),
-          gt(emailVerificationTable.expiresAt, getCurrentUTCDate())
+          gt(emailVerificationTable.expiresAt, getCurrentUTCDate()),
+          eq(emailVerificationTable.emailSent, true)
         )
       );
 
@@ -180,7 +195,17 @@ export const resendVerifyEmail = async (
     };
 
     // fail silently if error happens
-    transporter.sendMail(mailOptions, function (err, info) {
+    transporter.sendMail(mailOptions, async function (err, info) {
+      if (err) {
+        // mail has been successfully sent
+        await db
+          .update(emailVerificationTable)
+          .set({
+            emailSent: false,
+          })
+          .where(eq(emailVerificationTable.id, newEmailVerification[0].id));
+      }
+
       transporter.close();
     });
 

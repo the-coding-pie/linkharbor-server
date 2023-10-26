@@ -20,12 +20,16 @@ export const success = (
 interface FailureObj {
   status: number;
   message: string;
+  data?: object;
 }
 
-export const failure = (res: Response, { status, message }: FailureObj) => {
+export const failure = (
+  res: Response,
+  { status, data, message }: FailureObj
+) => {
   return res.status(status).send({
     success: false,
-    data: {},
+    data: data || {},
     message,
   });
 };
