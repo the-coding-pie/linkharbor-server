@@ -1,7 +1,8 @@
-import { NextFunction, Request, Response } from "express";
+import { NextFunction, Response } from "express";
 import { failure, success } from "../utils/responses";
 import validator from "validator";
 import {
+  DEFAULT_PAGE_SIZE,
   RESOURCE_DESCRIPTION_MAX_LENGTH,
   RESOURCE_TITLE_MAX_LENGTH,
 } from "../config";
@@ -10,7 +11,7 @@ import { categoryTable } from "../db/schemas/category";
 import { subCategoryTable } from "../db/schemas/subCategory";
 import { resourceTable } from "../db/schemas/resource";
 import { tempResourceTable } from "../db/schemas/tempResource";
-import { and, eq, exists, sql } from "drizzle-orm";
+import { and, desc, eq, exists, sql } from "drizzle-orm";
 import isNumeric from "../utils/isNumeric";
 import { voteTable } from "../db/schemas/vote";
 import { userTable } from "../db/schemas/user";
@@ -22,6 +23,11 @@ export const getResources = async (
   next: NextFunction
 ) => {
   const { subCategoryId } = req.params;
+
+  let pageNo = Object.keys(req.query).includes("pageNo") ? req.query.pageNo : 1;
+  let pageSize = Object.keys(req.query).includes("pageSize")
+    ? req.query.pageSize
+    : DEFAULT_PAGE_SIZE;
 
   if (!subCategoryId) {
     return failure(res, {
@@ -36,6 +42,34 @@ export const getResources = async (
       status: 400,
     });
   }
+
+  if (!isNumeric(pageNo)) {
+    return failure(res, {
+      message: "pageNo should be a number",
+      status: 400,
+    });
+  } else if (parseInt(pageNo) < 1) {
+    return failure(res, {
+      message: "pageNo should be >= 1",
+      status: 400,
+    });
+  }
+
+  pageNo = parseInt(pageNo);
+
+  if (!isNumeric(pageSize)) {
+    return failure(res, {
+      message: "pageSize should be a number",
+      status: 400,
+    });
+  } else if (parseInt(pageSize) < 1) {
+    return failure(res, {
+      message: "pageSize should be >= 1",
+      status: 400,
+    });
+  }
+
+  pageSize = parseInt(pageSize);
 
   // check if sub category exists
   const subCategoryExists = await db.query.subCategoryTable.findFirst({
@@ -59,6 +93,7 @@ export const getResources = async (
         createdAt: resourceTable.createdAt,
         updatedAt: resourceTable.updatedAt,
         user: {
+          id: userTable.id,
           name: userTable.name,
           username: userTable.username,
           profile: userTable.profile,
@@ -87,10 +122,11 @@ export const getResources = async (
               ),
             }
           : {}),
-        voteCount: sql<number>`count(${voteTable.id})`.mapWith(Number),
+        votesCount: sql<number>`count(${voteTable.id})`.mapWith(Number),
       })
       .from(resourceTable)
       .where(eq(resourceTable.subCategoryId, subCategoryExists.id))
+      .leftJoin(voteTable, eq(voteTable.resourceId, resourceTable.id))
       .leftJoin(userTable, eq(userTable.id, resourceTable.userId))
       .leftJoin(
         subCategoryTable,
@@ -100,14 +136,25 @@ export const getResources = async (
         categoryTable,
         eq(categoryTable.id, subCategoryTable.categoryId)
       )
-      .leftJoin(voteTable, eq(voteTable.resourceId, resourceTable.id))
       .groupBy(
-        sql`${resourceTable.id}, ${userTable.name}, ${userTable.username}, ${userTable.profile}, ${userTable.createdAt}, ${subCategoryTable.id}, ${categoryTable.id}`
+        sql`${resourceTable.id}, ${userTable.id}, ${subCategoryTable.id}, ${categoryTable.id}`
       )
-      .orderBy(sql`count(${voteTable.id}) DESC`); // Sort by vote count in descending order
+      .orderBy(sql`count(${voteTable.id}) DESC`, desc(resourceTable.title)) // Sort by vote count in descending order
+      .limit(pageSize)
+      .offset((pageNo - 1) * pageSize);
+
+    const totalCount = await db
+      .select({
+        count: sql<number>`count(*)`.mapWith(Number),
+      })
+      .from(resourceTable)
+      .where(eq(resourceTable.subCategoryId, subCategoryExists.id));
 
     return success(res, {
-      data: resources,
+      data: {
+        resources,
+        totalCount: totalCount[0].count,
+      },
       status: 200,
     });
   } catch (err) {
@@ -404,6 +451,7 @@ export const addResource = async (
     next(err);
   }
 };
+
 // toggle vote for the resource
 export const toggleVote = async (
   req: any,
@@ -448,19 +496,32 @@ export const toggleVote = async (
         ),
     });
 
+    let upvoted = false;
+
     if (voteExists) {
       // remove it
       await db.delete(voteTable).where(eq(voteTable.id, voteExists.id));
+      upvoted = false;
     } else {
       // add it
       await db.insert(voteTable).values({
         userId: req.user.id,
         resourceId: resourceExists.id,
       });
+      upvoted = true;
     }
+
+    // const votes = await db
+    //   .select({ count: sql<number>`count(*)` })
+    //   .from(voteTable)
+    //   .where(and(eq(voteTable.resourceId, resourceExists.id)));
 
     return success(res, {
       status: 200,
+      data: {
+        upvoted,
+        // voteCount: votes[0].count,
+      },
       message: "Vote updated successfully",
     });
   } catch (err) {

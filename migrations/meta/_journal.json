@@ -5,43 +5,8 @@
     {
       "idx": 0,
       "version": "5",
-      "when": 1697265750035,
-      "tag": "0000_cheerful_shen",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "5",
-      "when": 1697275119370,
-      "tag": "0001_curvy_nightmare",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "5",
-      "when": 1697307995462,
-      "tag": "0002_illegal_scarlet_spider",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "5",
-      "when": 1697308138797,
-      "tag": "0003_foamy_angel",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "5",
-      "when": 1697349743512,
-      "tag": "0004_simple_unus",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "5",
-      "when": 1698302826876,
-      "tag": "0005_bizarre_blackheart",
+      "when": 1698522801272,
+      "tag": "0000_typical_moira_mactaggert",
       "breakpoints": true
     }
   ]

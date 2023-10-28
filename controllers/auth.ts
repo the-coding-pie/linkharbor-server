@@ -273,16 +273,6 @@ export const registerUser = async (
       data: {
         accessToken: newAccessToken,
         refreshToken: newRefreshToken,
-        user: {
-          id: newUser[0].id,
-          name: newUser[0].name,
-          username: newUser[0].username,
-          isAdmin: newUser[0].isAdmin,
-          isOAuth: newUser[0].isOAuth,
-          email: newUser[0].email,
-          emailVerified: newUser[0].emailVerified,
-          profile: newUser[0].profile,
-        },
       },
       message:
         "Your account has been created successfully! Please verify your email.",
@@ -354,16 +344,6 @@ export const loginUser = async (
       data: {
         accessToken: newAccessToken,
         refreshToken: newRefreshToken,
-        user: {
-          id: userExists[0].id,
-          name: userExists[0].name,
-          username: userExists[0].username,
-          isAdmin: userExists[0].isAdmin,
-          isOAuth: userExists[0].isOAuth,
-          email: userExists[0].email,
-          emailVerified: userExists[0].emailVerified,
-          profile: userExists[0].profile,
-        },
       },
       message: "",
     });
@@ -499,16 +479,6 @@ export const googleAuth = async (
       data: {
         accessToken: newAccessToken,
         refreshToken: newRefreshToken,
-        user: {
-          id: user[0].id,
-          name: user[0].name,
-          username: user[0].username,
-          isAdmin: user[0].isAdmin,
-          isOAuth: user[0].isOAuth,
-          email: user[0].email,
-          emailVerified: user[0].emailVerified,
-          profile: user[0].profile,
-        },
       },
       message: "Google OAuth successfull",
     });

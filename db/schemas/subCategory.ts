@@ -13,6 +13,7 @@ import getCurrentUTCDate from "../../utils/getCurrentUTCDate";
 export const subCategoryTable = pgTable("sub_category", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 200 }).notNull(),
+  image: varchar("image").default("sub_category.png").notNull(),
   categoryId: integer("category_id")
     .notNull()
     .references(() => categoryTable.id),

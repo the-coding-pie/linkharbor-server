@@ -1,5 +1,6 @@
 import { NextFunction, Response } from "express";
 import { success } from "../utils/responses";
+import { getProfile } from "../utils/helper";
 
 export const getCurrentUser = async (
   req: any,
@@ -18,7 +19,7 @@ export const getCurrentUser = async (
         isOAuth: user.isOAuth,
         email: user.email,
         emailVerified: user.emailVerified,
-        profile: user.profile,
+        profile: getProfile(user.profile),
       },
       message: "",
     });

@@ -1,2 +1,0 @@
-ALTER TABLE "email_verification" ALTER COLUMN "expires_at" SET DEFAULT '2023-10-14 09:48:39.000';--> statement-breakpoint
-ALTER TABLE "forgot_password" ALTER COLUMN "expires_at" SET DEFAULT '2023-10-17 09:18:39.000';

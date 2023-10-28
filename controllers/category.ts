@@ -3,6 +3,7 @@ import { db } from "../db";
 import { failure, success } from "../utils/responses";
 import isNumeric from "../utils/isNumeric";
 import categorizeByAlphabet from "../utils/categorizeByAlphabet";
+import { getCategoryImgFullPath, getSubsImgFullPath } from "../utils/helper";
 
 export const getCategories = async (
   req: Request,
@@ -15,7 +16,12 @@ export const getCategories = async (
       orderBy: (category, { asc }) => asc(category.name),
     });
 
-    const groupedByAlphabets = categorizeByAlphabet(categories);
+    const groupedByAlphabets = categorizeByAlphabet(
+      categories.map((c) => ({
+        ...c,
+        image: getCategoryImgFullPath(c.image),
+      }))
+    );
 
     return success(res, {
       data: groupedByAlphabets,
@@ -68,7 +74,10 @@ export const getSubCategories = async (
     });
 
     return success(res, {
-      data: subCategories,
+      data: subCategories.map((sc) => ({
+        ...sc,
+        image: getSubsImgFullPath(sc.image),
+      })),
     });
   } catch (err) {
     next(err);
@@ -86,6 +95,7 @@ export const getCategoriesAndSubs = async (
       columns: {
         id: true,
         name: true,
+        image: true,
       },
       with: {
         subCategories: {
@@ -93,13 +103,21 @@ export const getCategoriesAndSubs = async (
           columns: {
             id: true,
             name: true,
+            image: true,
           },
         },
       },
     });
 
     return success(res, {
-      data: categories,
+      data: categories.map((c) => ({
+        ...c,
+        image: getCategoryImgFullPath(c.image),
+        subCategories: c.subCategories.map((sc) => ({
+          ...sc,
+          image: getSubsImgFullPath(sc.image),
+        })),
+      })),
     });
   } catch (err) {
     next(err);

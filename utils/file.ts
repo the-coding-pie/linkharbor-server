@@ -11,7 +11,6 @@ export const saveFile = async (
   height: number,
   directory: string
 ) => {
-  console.log(file);
   const fileName = new Date().toISOString() + createRandomToken(24) + ".jpeg";
 
   await sharp(file.buffer)

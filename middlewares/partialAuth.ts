@@ -4,6 +4,7 @@ import { UserTokenObj } from "../types/interfaces";
 import { db } from "../db";
 import { userTable } from "../db/schemas/user";
 import { eq } from "drizzle-orm";
+import { failure } from "../utils/responses";
 
 export const partialAuthMiddleware = async (
   req: any,
@@ -13,6 +14,8 @@ export const partialAuthMiddleware = async (
   const header = req.headers["authorization"];
   const token = header && header.split(" ")[1];
 
+  // if token, then check and throw 401 if invalid token
+  // else simply return response
   if (token) {
     // in token -> { id: 123 }
     // jwt verify() will throw an error
@@ -37,10 +40,21 @@ export const partialAuthMiddleware = async (
         .from(userTable)
         .where(eq(userTable.id, payload.id));
 
-      if (user.length) {
-        req.user = user[0];
+      // if no such user exists (bcz user has been deleted or invalid user id)
+      if (!user.length) {
+        return failure(res, {
+          status: 401,
+          message: "Invalid user",
+        });
       }
-    } catch (err) {}
+
+      req.user = user[0];
+    } catch (err) {
+      return failure(res, {
+        status: 401,
+        message: "Invalid access token",
+      });
+    }
   }
 
   next();
