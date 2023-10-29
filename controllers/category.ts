@@ -20,6 +20,7 @@ import { removeFile, saveFile } from "../utils/file";
 import { categoryTable } from "../db/schemas/category";
 import { subCategoryTable } from "../db/schemas/subCategory";
 import path from "path";
+import getCurrentUTCDate from "../utils/getCurrentUTCDate";
 
 export const getCategories = async (
   req: Request,
@@ -397,6 +398,7 @@ export const updateCategory = async (
       .set({
         ...values,
         image: fileName,
+        updatedAt: getCurrentUTCDate(),
       })
       .where(eq(categoryTable.id, categoryExists.id));
 
@@ -532,12 +534,13 @@ export const updateSubCategory = async (
       fileName = subCategoryExists.image;
     }
 
-    // update category
+    // update sub category
     await db
       .update(subCategoryTable)
       .set({
         ...values,
         image: fileName,
+        updatedAt: getCurrentUTCDate(),
       })
       .where(eq(subCategoryTable.id, subCategoryExists.id));
 

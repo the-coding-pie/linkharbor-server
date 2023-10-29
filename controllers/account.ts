@@ -367,6 +367,7 @@ export const updateAccount = async (
       .set({
         ...values,
         profile: fileName,
+        updatedAt: getCurrentUTCDate(),
       })
       .where(eq(userTable.id, req.user.id));
 
