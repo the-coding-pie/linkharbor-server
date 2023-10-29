@@ -2,9 +2,11 @@ import { NextFunction, Response } from "express";
 import { failure, success } from "../utils/responses";
 import validator from "validator";
 import {
+  CATEGORY_MAX_LENGTH,
   DEFAULT_PAGE_SIZE,
   RESOURCE_DESCRIPTION_MAX_LENGTH,
   RESOURCE_TITLE_MAX_LENGTH,
+  SUB_CATEGORY_MAX_LENGTH,
 } from "../config";
 import { db } from "../db";
 import { categoryTable } from "../db/schemas/category";
@@ -38,14 +40,14 @@ export const getResources = async (
 
   if (!isNumeric(subCategoryId)) {
     return failure(res, {
-      message: "subCategoryId should be a number",
+      message: "subCategoryId should be a valid number",
       status: 400,
     });
   }
 
   if (!isNumeric(pageNo)) {
     return failure(res, {
-      message: "pageNo should be a number",
+      message: "pageNo should be a valid number",
       status: 400,
     });
   } else if (parseInt(pageNo) < 1) {
@@ -59,7 +61,7 @@ export const getResources = async (
 
   if (!isNumeric(pageSize)) {
     return failure(res, {
-      message: "pageSize should be a number",
+      message: "pageSize should be a valid number",
       status: 400,
     });
   } else if (parseInt(pageSize) < 1) {
@@ -232,12 +234,14 @@ export const addResource = async (
     url = url.trim();
     title = validator.escape(title.trim());
     description = validator.escape(description.trim());
-    categoryId = isNumeric(categoryId)
-      ? categoryId
-      : validator.escape(categoryId.trim());
-    subCategoryId = isNumeric(subCategoryId)
-      ? subCategoryId
-      : validator.escape(subCategoryId.trim());
+    categoryId =
+      typeof categoryId === "number"
+        ? categoryId
+        : validator.escape(categoryId.trim());
+    subCategoryId =
+      typeof subCategoryId === "number"
+        ? subCategoryId
+        : validator.escape(subCategoryId.trim());
 
     // if the submitting person is an admin
     if (req.user.isAdmin) {
@@ -245,16 +249,46 @@ export const addResource = async (
 
       // check if category exists or a new one
       const categoryExists = await db.query.categoryTable.findFirst({
-        where: (category, { or, eq }) =>
-          or(
-            isNumeric(categoryId) ? eq(category.id, categoryId) : undefined,
-            sql`lower(${category.name}) = lower(${categoryId})`
-          ),
+        where: (category, { eq }) =>
+          typeof categoryId === "number"
+            ? eq(category.id, categoryId)
+            : sql`lower(${category.name}) = lower(${categoryId})`,
       });
 
       if (!categoryExists) {
-        // categoryId would be the name instead of id
-        // create the category and subCategory
+        // create category and subCategory
+        if (typeof categoryId !== "string") {
+          return failure(res, {
+            status: 400,
+            message:
+              "Category with that id doesn't exists. If it is a new category name, please pass it as a string",
+          });
+        }
+
+        if (typeof subCategoryId !== "string") {
+          return failure(res, {
+            status: 400,
+            message:
+              "Please pass a string for sub category name for this new category",
+          });
+        }
+
+        // categoryId would be the name instead of id and it will be a string
+        // create the category and subCategory after validation
+        if (categoryId.length > CATEGORY_MAX_LENGTH) {
+          return failure(res, {
+            status: 400,
+            message: "Category name should be <= 200 chars long",
+          });
+        }
+
+        if (subCategoryId.length > SUB_CATEGORY_MAX_LENGTH) {
+          return failure(res, {
+            status: 400,
+            message: "Sub Category name should be <= 200 chars long",
+          });
+        }
+
         const newCategory = await db
           .insert(categoryTable)
           .values({
@@ -276,23 +310,38 @@ export const addResource = async (
 
         isSubCategoryNew = true;
       } else {
-        // category exists
+        // the category exists
         // check if this subCategory exists or a whether it is a new one in that category
         const subCategoryExists = await db.query.subCategoryTable.findFirst({
-          where: (subCategory, { and, or, eq }) =>
+          where: (subCategory, { and, eq }) =>
             and(
-              or(
-                isNumeric(subCategoryId)
-                  ? eq(subCategory.id, subCategoryId)
-                  : undefined,
-                sql`lower(${subCategory.name}) = lower(${subCategoryId})`
-              ),
+              typeof subCategoryId === "number"
+                ? eq(subCategory.id, subCategoryId)
+                : sql`lower(${subCategory.name}) = lower(${subCategoryId})`,
               eq(subCategory.categoryId, categoryExists.id)
             ),
         });
 
-        if (!subCategoryExists) {
+        if (subCategoryExists) {
+          subCategoryId = subCategoryExists.id;
+        } else {
           // create new sub category
+          // check if subCategoryId is a string
+          if (typeof subCategoryId !== "string") {
+            return failure(res, {
+              status: 400,
+              message:
+                "Sub category with that id doesn't exists.  If it is a new sub category name, please pass it as a string",
+            });
+          }
+
+          if (subCategoryId.length > SUB_CATEGORY_MAX_LENGTH) {
+            return failure(res, {
+              status: 400,
+              message: "Sub Category name should be <= 200 chars long",
+            });
+          }
+
           const newSubCategory = await db
             .insert(subCategoryTable)
             .values({
@@ -307,22 +356,18 @@ export const addResource = async (
         }
       }
 
-      // if it is not a new sub category
+      // if it is not a new sub category, it is an existing one
       if (!isSubCategoryNew) {
         // check if resource is unique in this sub category
         const resourceExists = await db.query.resourceTable.findFirst({
           where: (resource, { eq, and, or }) =>
             or(
               and(
-                isNumeric(subCategoryId)
-                  ? eq(resource.subCategoryId, subCategoryId)
-                  : undefined,
+                eq(resource.subCategoryId, subCategoryId),
                 sql`lower(${resource.title}) = lower(${title})`
               ),
               and(
-                isNumeric(subCategoryId)
-                  ? eq(resource.subCategoryId, subCategoryId)
-                  : undefined,
+                eq(resource.subCategoryId, subCategoryId),
                 eq(resource.url, url)
               )
             ),
@@ -357,25 +402,21 @@ export const addResource = async (
 
     // check if category exists or a new one
     const categoryExists = await db.query.categoryTable.findFirst({
-      where: (category, { or, eq }) =>
-        or(
-          isNumeric(categoryId) ? eq(category.id, categoryId) : undefined,
-          sql`lower(${category.name}) = lower(${categoryId})`
-        ),
+      where: (category, { eq }) =>
+        typeof categoryId === "number"
+          ? eq(category.id, categoryId)
+          : sql`lower(${category.name}) = lower(${categoryId})`,
     });
 
     if (categoryExists) {
       // category exists
       // check if this subCategory exists or a whether it is a new one in that category
       const subCategoryExists = await db.query.subCategoryTable.findFirst({
-        where: (subCategory, { and, or, eq }) =>
+        where: (subCategory, { and, eq }) =>
           and(
-            or(
-              isNumeric(subCategoryId)
-                ? eq(subCategory.id, subCategoryId)
-                : undefined,
-              sql`lower(${subCategory.name}) = lower(${subCategoryId})`
-            ),
+            typeof subCategoryId === "number"
+              ? eq(subCategory.id, subCategoryId)
+              : sql`lower(${subCategory.name}) = lower(${subCategoryId})`,
             eq(subCategory.categoryId, categoryExists.id)
           ),
       });
@@ -466,11 +507,9 @@ export const toggleVote = async (
         message: "category id is required",
         status: 400,
       });
-    }
-
-    if (!isNumeric(id)) {
+    } else if (!isNumeric(id)) {
       return failure(res, {
-        message: "category id should be a number",
+        message: "category id should be a valid number",
         status: 400,
       });
     }
@@ -523,6 +562,58 @@ export const toggleVote = async (
         // voteCount: votes[0].count,
       },
       message: "Vote updated successfully",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// get all upvotes of a resource
+export const getUpVoters = async (
+  req: any,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return failure(res, {
+        message: "category id is required",
+        status: 400,
+      });
+    } else if (!isNumeric(id)) {
+      return failure(res, {
+        message: "category id should be a valid number",
+        status: 400,
+      });
+    }
+
+    // check if it is a valid resource
+    const resourceExists = await db.query.resourceTable.findFirst({
+      where: (resource, { eq }) => eq(resource.id, parseInt(id)),
+    });
+
+    if (!resourceExists) {
+      return failure(res, {
+        message: "Resource with this id not found",
+        status: 404,
+      });
+    }
+
+    const upVoters = await db
+      .select({
+        username: userTable.username,
+        name: userTable.name,
+        profile: userTable.profile,
+      })
+      .from(voteTable)
+      .where(eq(voteTable.resourceId, resourceExists.id))
+      .leftJoin(userTable, eq(voteTable.userId, userTable.id))
+      .orderBy(desc(voteTable.createdAt));
+
+    return success(res, {
+      data: upVoters,
     });
   } catch (err) {
     next(err);

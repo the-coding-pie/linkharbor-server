@@ -32,6 +32,7 @@ export const adminAuthMiddleware = async (
         id: userTable.id,
         username: userTable.username,
         profile: userTable.profile,
+        usernameUpdated: userTable.usernameUpdated,
         email: userTable.email,
         isAdmin: userTable.isAdmin,
         emailVerified: userTable.emailVerified,

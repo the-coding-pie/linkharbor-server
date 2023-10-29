@@ -5,7 +5,15 @@ import { userTable } from "../db/schemas/user";
 import { and, eq, gt } from "drizzle-orm";
 import { forgotPasswordTable } from "../db/schemas/forgotPassword";
 import createRandomToken from "../utils/createRandomToken";
-import { APP_NAME, CLIENT_URL, FORGOT_PASSWORD_TOKEN_LENGTH } from "../config";
+import {
+  APP_NAME,
+  CLIENT_URL,
+  DEFAULT_PROFILE_IMG_NAME,
+  FORGOT_PASSWORD_TOKEN_LENGTH,
+  PROFILE_PICS_DIR_NAME,
+  PROFILE_SIZE,
+  PUBLIC_DIR_NAME,
+} from "../config";
 import nodemailer from "nodemailer";
 import { emailVerificationTable } from "../db/schemas/emailVerification";
 import { refreshTokenTable } from "../db/schemas/refreshToken";
@@ -13,6 +21,8 @@ import { generateAccessToken, generateRefreshToken } from "../utils/token";
 import { failure, success } from "../utils/responses";
 import argon2 from "argon2";
 import getCurrentUTCDate from "../utils/getCurrentUTCDate";
+import { removeFile, saveFile } from "../utils/file";
+import path from "path";
 
 export const forgotPassword = async (
   req: Request,
@@ -233,6 +243,135 @@ export const resetPassword = async (
         refreshToken: newRefreshToken,
       },
       message: "Password changed successfully!",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// update user profile
+// PUT /accounts
+export const updateAccount = async (
+  req: any,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { username, name, password } = req.body;
+    const profile = req.file;
+
+    let values: any = {};
+
+    let fileName;
+
+    if (Object.keys(req.body).includes("name")) {
+      if (!name) {
+        return failure(res, {
+          status: 400,
+          message: "Name is required",
+        });
+      } else if (name.length < 2 || name.length > 30) {
+        return failure(res, {
+          status: 400,
+          message: "Name must be between 2-30 characters long",
+        });
+      }
+
+      values.name = validator.escape(name.trim());
+    }
+
+    // if password key is present, and it contains a value, then its validation
+    if (password) {
+      if (password.length < 8) {
+        return failure(res, {
+          status: 400,
+          message: "Password must be at least 8 characters long",
+        });
+      } else if (!/\d/.test(password) || !/[a-zA-Z]/.test(password)) {
+        // check if password has atleast one digit and one letter
+        return failure(res, {
+          status: 400,
+          message: "Password must contain at least one letter and one number",
+        });
+      }
+
+      values.password = await argon2.hash(password.trim());
+    }
+
+    // current user can change username, then it's validation
+    if (Object.keys(req.body).includes("username")) {
+      // if user already used his 1 chance
+      if (req.user.usernameUpdated) {
+        return failure(res, {
+          status: 403,
+          message:
+            "You already updated your username, you can't update anymore 😔",
+        });
+      } else {
+        if (username !== req.user.username) {
+          // validation of username
+          if (!username) {
+            return failure(res, {
+              status: 400,
+              message: "Username cannot be empty",
+            });
+          } else if (username.length < 2) {
+            return failure(res, {
+              status: 400,
+              message: "Username must be atleast 2 chars long",
+            });
+          } else if (username.length > 30) {
+            return failure(res, {
+              status: 400,
+              message: "Username must be atleast 2 chars long",
+            });
+          } else if (!/^[A-Za-z0-9_-]*$/.test(username)) {
+            return failure(res, {
+              status: 400,
+              message:
+                "Username must only contain letters, numbers, underscores and dashes",
+            });
+          }
+
+          values.username = validator.escape(username.trim());
+          values.usernameUpdated = true;
+        }
+      }
+    }
+
+    if (profile) {
+      // remove old image and upload new image
+      if (req.user.profile !== DEFAULT_PROFILE_IMG_NAME) {
+        await removeFile(
+          path.join(PUBLIC_DIR_NAME, PROFILE_PICS_DIR_NAME, req.user.profile)
+        );
+      }
+
+      fileName = await saveFile(
+        profile,
+        PROFILE_SIZE.WIDTH,
+        PROFILE_SIZE.HEIGHT,
+        PROFILE_PICS_DIR_NAME
+      );
+    } else {
+      fileName = req.user.profile;
+    }
+
+    if (values.password) {
+      values.isOAuth = false;
+    }
+
+    // update user
+    await db
+      .update(userTable)
+      .set({
+        ...values,
+        profile: fileName,
+      })
+      .where(eq(userTable.id, req.user.id));
+
+    return success(res, {
+      message: "Informations updated successfully",
     });
   } catch (err) {
     next(err);

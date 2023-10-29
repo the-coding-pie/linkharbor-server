@@ -1,11 +1,5 @@
-import {
-  adjectives,
-  names,
-  starWars,
-  colors,
-  uniqueNamesGenerator,
-} from "unique-names-generator";
 import { db } from "../db";
+import { generateUsername } from "unique-username-generator";
 
 // const filteredAdjectives = adjectives.filter(
 //   (a) => !a.includes("sex") || !a.includes("hot")
@@ -17,12 +11,7 @@ const genUsername = async () => {
   let username = "";
 
   while (usernameExists) {
-    username = uniqueNamesGenerator({
-      dictionaries: [names, starWars, colors],
-      separator: "_",
-      length: 2,
-      style: "lowerCase",
-    });
+    username = generateUsername("_", 4, 30).toLowerCase();
 
     const userExists = await db.query.userTable.findFirst({
       where: (user, { eq }) => eq(user.username, username),

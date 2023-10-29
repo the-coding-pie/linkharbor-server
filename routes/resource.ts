@@ -3,6 +3,7 @@ import * as resourceController from "../controllers/resource";
 import { authMiddleware } from "../middlewares/auth";
 import { emailVerifiedMiddleware } from "../middlewares/emailVerified";
 import { partialAuthMiddleware } from "../middlewares/partialAuth";
+import { multerUploadMultiple } from "../middlewares/multerUploadMultiple";
 
 const resourceRouter = express.Router();
 
@@ -20,6 +21,9 @@ resourceRouter.get(
   partialAuthMiddleware,
   resourceController.getResources
 );
+
+// GET /resources/:id/voters -> get all resources of a sub category
+resourceRouter.get("/:id/voters", resourceController.getUpVoters);
 
 // PUT /resources/:id/vote -> toggle vote
 resourceRouter.put(

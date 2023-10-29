@@ -40,4 +40,23 @@ export const PROFILE_SIZE = {
   HEIGHT: 250,
 };
 
+// category img width and height
+export const CATEGORY_SIZE = {
+  WIDTH: 80,
+  HEIGHT: 80,
+};
+
+// sub category img width and height
+export const SUB_CATEGORY_SIZE = {
+  WIDTH: 80,
+  HEIGHT: 80,
+};
+
 export const DEFAULT_PAGE_SIZE = 20;
+
+export const CATEGORY_MAX_LENGTH = 200;
+export const SUB_CATEGORY_MAX_LENGTH = 200;
+
+export const DEFAULT_CATEGORY_IMG_NAME = "category.png";
+export const DEFAULT_SUB_CATEGORY_IMG_NAME = "sub_category.png";
+export const DEFAULT_PROFILE_IMG_NAME = "default.jpg";

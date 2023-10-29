@@ -32,6 +32,7 @@ export const partialAuthMiddleware = async (
           username: userTable.username,
           name: userTable.name,
           profile: userTable.profile,
+          usernameUpdated: userTable.usernameUpdated,
           email: userTable.email,
           isAdmin: userTable.isAdmin,
           emailVerified: userTable.emailVerified,

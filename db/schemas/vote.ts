@@ -1,8 +1,7 @@
 import { integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 import { userTable } from "./user";
 import { resourceTable } from "./resource";
-import { relations } from "drizzle-orm";
-import getCurrentUTCDate from "../../utils/getCurrentUTCDate";
+import { relations, sql } from "drizzle-orm";
 
 export const voteTable = pgTable("vote", {
   id: serial("id").primaryKey(),
@@ -12,7 +11,9 @@ export const voteTable = pgTable("vote", {
   resourceId: integer("resource_id")
     .notNull()
     .references(() => resourceTable.id),
-  createdAt: timestamp("created_at").default(getCurrentUTCDate()).notNull(),
+  createdAt: timestamp("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
 });
 
 export const voteTableRelations = relations(voteTable, ({ one, many }) => ({

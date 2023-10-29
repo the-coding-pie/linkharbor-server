@@ -17,6 +17,7 @@ export const getCurrentUser = async (
         username: user.username,
         isAdmin: user.isAdmin,
         isOAuth: user.isOAuth,
+        usernameUpdated: user.usernameUpdated,
         email: user.email,
         emailVerified: user.emailVerified,
         profile: getProfile(user.profile),

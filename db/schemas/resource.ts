@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   integer,
   pgTable,
@@ -14,7 +14,6 @@ import {
   RESOURCE_TITLE_MAX_LENGTH,
 } from "../../config";
 import { voteTable } from "./vote";
-import getCurrentUTCDate from "../../utils/getCurrentUTCDate";
 
 export const resourceTable = pgTable("resource", {
   id: serial("id").primaryKey(),
@@ -29,8 +28,12 @@ export const resourceTable = pgTable("resource", {
   subCategoryId: integer("subcategory_id")
     .notNull()
     .references(() => subCategoryTable.id),
-  createdAt: timestamp("created_at").default(getCurrentUTCDate()).notNull(),
-  updatedAt: timestamp("updated_at").default(getCurrentUTCDate()).notNull(),
+  createdAt: timestamp("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: timestamp("updated_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
 });
 
 export const resourceTableRelations = relations(

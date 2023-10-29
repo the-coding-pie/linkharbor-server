@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   integer,
   pgTable,
@@ -8,17 +8,24 @@ import {
 } from "drizzle-orm/pg-core";
 import { categoryTable } from "./category";
 import { resourceTable } from "./resource";
-import getCurrentUTCDate from "../../utils/getCurrentUTCDate";
+import {
+  DEFAULT_SUB_CATEGORY_IMG_NAME,
+  SUB_CATEGORY_MAX_LENGTH,
+} from "../../config";
 
 export const subCategoryTable = pgTable("sub_category", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 200 }).notNull(),
-  image: varchar("image").default("sub_category.png").notNull(),
+  name: varchar("name", { length: SUB_CATEGORY_MAX_LENGTH }).notNull(),
+  image: varchar("image").default(DEFAULT_SUB_CATEGORY_IMG_NAME).notNull(),
   categoryId: integer("category_id")
     .notNull()
     .references(() => categoryTable.id),
-  createdAt: timestamp("created_at").default(getCurrentUTCDate()).notNull(),
-  updatedAt: timestamp("updated_at").default(getCurrentUTCDate()).notNull(),
+  createdAt: timestamp("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: timestamp("updated_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
 });
 
 export const subCategoryTableRelations = relations(

@@ -9,9 +9,16 @@ export const saveFile = async (
   file: any,
   width: number,
   height: number,
-  directory: string
+  directory: string,
+  prefixName?: string
 ) => {
-  const fileName = new Date().toISOString() + createRandomToken(24) + ".jpeg";
+  const fileName = prefixName
+    ? prefixName +
+      "_" +
+      new Date().toISOString() +
+      createRandomToken(24) +
+      ".jpeg"
+    : new Date().toISOString() + createRandomToken(24) + ".jpeg";
 
   await sharp(file.buffer)
     .resize(width, height)

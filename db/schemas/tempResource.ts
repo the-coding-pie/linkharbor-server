@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   integer,
   pgTable,
@@ -26,8 +26,12 @@ export const tempResourceTable = pgTable("temp_resource", {
     .references(() => userTable.id),
   category: text("category").notNull(),
   subCategory: text("subcategory").notNull(),
-  createdAt: timestamp("created_at").default(getCurrentUTCDate()).notNull(),
-  updatedAt: timestamp("updated_at").default(getCurrentUTCDate()).notNull(),
+  createdAt: timestamp("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: timestamp("updated_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
 });
 
 export const tempResourceTableRelations = relations(

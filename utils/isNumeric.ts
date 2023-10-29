@@ -1,3 +1,4 @@
+// check if incoming number or string has only contains number and >= 0
 const isNumeric = (value: number | string): boolean => {
   // Convert to string if it's a number
   const strValue = typeof value === "number" ? value.toString() : value;
