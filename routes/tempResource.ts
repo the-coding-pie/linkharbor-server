@@ -18,7 +18,7 @@ tempResourceRouter.delete(
   tempResourceController.removeTempResource
 );
 
-// Protected(Auth + Admin) GET /temp-resources -> get all resources of a sub category
+// Protected(Auth + Admin) GET /temp-resources -> get all resources
 tempResourceRouter.get(
   "/",
   adminAuthMiddleware,

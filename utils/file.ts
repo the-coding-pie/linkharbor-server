@@ -12,25 +12,27 @@ export const saveFile = async (
   directory: string,
   prefixName?: string
 ) => {
+  const type = file?.mimetype?.split("/");
+
+  const randomToken = await createRandomToken(24);
   const fileName = prefixName
     ? prefixName +
       "_" +
       new Date().toISOString() +
-      createRandomToken(24) +
-      ".jpeg"
-    : new Date().toISOString() + createRandomToken(24) + ".jpeg";
+      randomToken +
+      "." +
+      type[type.length - 1]
+    : new Date().toISOString() + randomToken + "." + type[type.length - 1];
 
   await sharp(file.buffer)
     .resize(width, height)
-    .toFormat("jpeg")
-    .jpeg({ quality: 90 })
     .toFile(path.join(PUBLIC_DIR_NAME, directory, fileName));
 
   return fileName;
 };
 
 export const removeFile = async (path: string) => {
-  fs.unlink(path, (err) => {
+  return fs.unlink(path, (err) => {
     if (err) {
       console.log(err);
     } else {

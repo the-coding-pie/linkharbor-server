@@ -301,19 +301,30 @@ export const updateAccount = async (
     // current user can change username, then it's validation
     if (Object.keys(req.body).includes("username")) {
       // if user already used his 1 chance
-      if (req.user.usernameUpdated) {
+      if (req.user.usernameUpdated && username.trim() !== req.user.username) {
         return failure(res, {
           status: 403,
           message:
             "You already updated your username, you can't update anymore 😔",
         });
       } else {
-        if (username !== req.user.username) {
+        if (username.trim() !== req.user.username) {
           // validation of username
           if (!username) {
             return failure(res, {
               status: 400,
               message: "Username cannot be empty",
+            });
+          } else if (
+            await db.query.userTable.findFirst({
+              where: (user, { eq }) =>
+                eq(user.username, validator.escape(username.trim())),
+            })
+          ) {
+            // username is already taken
+            return failure(res, {
+              status: 400,
+              message: "Username is already taken",
             });
           } else if (username.length < 2) {
             return failure(res, {
@@ -323,7 +334,7 @@ export const updateAccount = async (
           } else if (username.length > 30) {
             return failure(res, {
               status: 400,
-              message: "Username must be atleast 2 chars long",
+              message: "Username must be less than or equal to 30 chars long",
             });
           } else if (!/^[A-Za-z0-9_-]*$/.test(username)) {
             return failure(res, {
