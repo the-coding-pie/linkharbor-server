@@ -27,22 +27,33 @@ export const getCategories = async (
   res: Response,
   next: NextFunction
 ) => {
+  const { groupByAlph } = req.query;
+
   try {
     // return all categories alphabetically sorted
     const categories = await db.query.categoryTable.findMany({
       orderBy: (category, { asc }) => asc(category.name),
     });
 
-    const groupedByAlphabets = categorizeByAlphabet(
-      categories.map((c) => ({
-        ...c,
-        image: getCategoryImgFullPath(c.image),
-      }))
-    );
+    if (groupByAlph === "true") {
+      const groupedByAlphabets = categorizeByAlphabet(
+        categories.map((c) => ({
+          ...c,
+          image: getCategoryImgFullPath(c.image),
+        }))
+      );
 
-    return success(res, {
-      data: groupedByAlphabets,
-    });
+      return success(res, {
+        data: groupedByAlphabets,
+      });
+    } else {
+      return success(res, {
+        data: categories.map((c) => ({
+          ...c,
+          image: getCategoryImgFullPath(c.image),
+        })),
+      });
+    }
   } catch (err) {
     next(err);
   }
